@@ -5,6 +5,9 @@
 #include <string>
 #include <sstream>
 
+#define TXTRED     "\x1b[31;1m"
+#define TXTDEF     "\x1b[0m"
+
 struct coord
 {
 	coord();
@@ -38,6 +41,7 @@ void resetList(bool*in){
 struct cell
 {
 	std::vector<int> get_dits();	//potentially valid values
+    int get_dit(); //gets the first dit
     bool dits[10];
 	int numDits();		//number of potentially valid values
 	int value;			//solution to a cell
@@ -77,6 +81,12 @@ int cell::numDits(){
         if(dits[i]) { count++; }
     }
     return count;
+}
+
+int cell::get_dit(){
+    int i = 1;
+    while(!dits[i] && i < 10){ i++; }
+    return i;
 }
 
 void cell::zeroDits(){
@@ -131,6 +141,9 @@ Sudoku::Sudoku(int ary[9][9]){
             if (data[i][j].value != 0){
                 data[i][j].given = true;
             }
+            else{
+                data[i][j].given = false;
+            }
         }
     }
 }
@@ -153,6 +166,9 @@ void Sudoku::populate(int ary[9][9]){
 			if (data[i][j].value != 0){
 				data[i][j].given = true;
 			}
+            else{
+                data[i][j].given = false;
+            }
 		}
 	}
 }
@@ -165,7 +181,14 @@ void Sudoku::print(){
 		{
 			if(j%3==0 && j!=0) { std::cout<< "| "; }
             if(data[i][j].value == 0){ std::cout << "  "; }
-			else{ std::cout << data[i][j].value << ' '; }
+			else{
+                if(data[i][j].given){
+                    std::cout << "\x1b[31;1m" << data[i][j].value << "\x1b[0m ";
+                }
+                else{
+                    std::cout << data[i][j].value << ' ';
+                }
+            }
 		}
 		if(i%3==2 && i!=8){
 			std::cout << "\n- - - + - - - + - - -";
@@ -266,13 +289,72 @@ bool Sudoku::setSingles(){
 		{
 			if (data[i][j].numDits() == 1 && data[i][j].value == 0){
 				out = true;
-				data[i][j].value = data[i][j].get_dits()[0];
+				data[i][j].value = data[i][j].get_dit();
 				data[i][j].isValid = true;
 			}
 			data[i][j].zeroDits();
 		}
 	}
 	return out;
+}
+
+
+bool Sudoku::setUniques(){
+    bool out = false;
+    coord pos;
+    for(int digit = 1; digit <= 9; digit++){
+        int count = 0;
+        //rows
+        for(int r = 0; r < 9; r++){
+            for(int c = 0; c < 9; c++){
+                if(data[r][c].dits[digit]){
+                    count++;
+                    pos.set(r,c);
+                }
+            }
+            if(count == 1) {
+                data[pos.row][pos.col].value = digit;
+                out = true;
+            }
+            count = 0;
+        }
+        //columns
+        for(int c = 0; c < 9; c++){
+            for(int r = 0; r < 9; r++){
+                if(data[r][c].dits[digit]){
+                    count++;
+                    pos.set(r,c);
+                }
+            }
+            if(count == 1) {
+                data[pos.row][pos.col].value = digit;
+                out = true;
+            }
+            count = 0;
+        }
+        //blocks
+        for(int br = 0; br < 3; br++){
+            for(int bc = 0; bc < 3; bc++){
+            	int rowOffset, colOffset;
+            	rowOffset = br * 3;
+            	colOffset = bc * 3;
+            	for (int i = 0; i < 3; i++){
+            		for (int j = 0; j < 3; j++){
+            			if (data[i + rowOffset][j + colOffset].dits[digit]){
+                            count++;
+                            pos.set(i+rowOffset, j+colOffset);
+                        }
+            		}
+            	}
+                if(count == 1) {
+                    data[pos.row][pos.col].value = digit;
+                    out = true;
+                }
+                count = 0;
+            }
+        }
+    }
+    return out;
 }
 
 //----------------------------[boolean properties]------------------------------
@@ -332,5 +414,6 @@ bool Sudoku::complete(){
             if(data[j][i].value == 0){ return false; }
         }
     }
-    return true;
+    //at this point, we know the sudoku is filled, but is it a valid fill?
+    return valid();
 }

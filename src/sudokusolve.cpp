@@ -1,32 +1,71 @@
-#include <vector>
-#include <iostream>
 #include "structure.hpp"
-#include "fileops.h"
+#include <fstream>
+#include <iostream>
+#include <string>
+#include <vector>
 
+void load_sudoku(std::string fname, int ary[9][9]){
+	std::string line;
+	std::ifstream infile(fname.c_str());
+	int row = 0;
+    int col = 0;
+    bool lineHasData = false;
+	while (std::getline(infile, line))
+	{
+        if (line.length() > 1){
+            col = 0;
+			for (char c : line){
+                if(c >= '0' && c <= '9'){
+                    ary[row][col] = c - '0';
+                    col++;
+                    lineHasData = true;
+                }
+			}
+			if(lineHasData) row++;
+            lineHasData = false;
+	    }
+    }
+    infile.close();
+}
 
-char c;
+void load_sudoku(int ary[9][9]){
+    std::string line;
+	int row = 0;
+    int col = 0;
+    bool lineHasData = false;
+	while (std::getline(std::cin, line))
+	{
+        if (line.length() > 1){
+            col = 0;
+			for (char c : line){
+                if(c >= '0' && c <= '9'){
+                    ary[row][col] = c - '0';
+                    col++;
+                    lineHasData = true;
+                }
+			}
+            std::cout << std::endl;
+			if(lineHasData) row++;
+            lineHasData = false;
+	    }
+	}
+}
 
 long int numcalls = 0;
-long int stackdepth = 0;
 
 bool solve(Sudoku& puzzle){
-    numcalls++; stackdepth++;
-    if (numcalls % 1000 == 0){
-        std::cout << "Number of calls: " << numcalls << std::endl;
-        std::cout << "Stack Depth:     " << stackdepth << std::endl;
-        puzzle.print();
-    }
-    if(puzzle.invalid()) { stackdepth--; return false; }
+    numcalls++;
+    if(puzzle.invalid()) { return false; }
     while(!puzzle.complete()){
         puzzle.setAllDits();
     	while (puzzle.setSingles()){
     		puzzle.setAllDits();
+            //puzzle.setUniques();
+            //puzzle.setAllDits();
     	}
 
-        if(puzzle.complete() && puzzle.valid()){ stackdepth--; return true; }
-        if(puzzle.invalid()) { stackdepth--; return false; }
-
-        puzzle.setAllDits();
+        if(puzzle.complete()){ return true; }
+        if(puzzle.invalid()) { return false; }
 
         coord poe = puzzle.findFirstEmpty(); //point of entry
         std::vector<int> dits = puzzle.get_dits(poe);
@@ -37,7 +76,7 @@ bool solve(Sudoku& puzzle){
             if(solve(temp)) break;
         }
         puzzle = temp;
-        if(puzzle.invalid()) { stackdepth--; return false; }
+        if(puzzle.invalid()) { return false; }
     }
     return true;
 }
@@ -45,11 +84,10 @@ bool solve(Sudoku& puzzle){
 int main(int argc, char* argv[]){
     int input[9][9];
 	if(argc > 1){ load_sudoku(argv[1], input); }
-    else{ load_sudoku("challenge.sudoku", input); }
+    else{ load_sudoku(input); }
 
 	Sudoku board(input);
 	board.print();
-    //coord poe = board.findFirstEmpty(); //point of entry
 
     if(solve(board)){
         std::cout << "The puzzle is valid" << std::endl;
@@ -61,7 +99,6 @@ int main(int argc, char* argv[]){
         std::cout << "Number of calls: " << numcalls << std::endl;
         board.print();
     }
-    // board.setAllDits();
 
 	return 0;
 }
